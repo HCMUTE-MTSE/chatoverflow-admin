@@ -23,6 +23,11 @@ export class LoginService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Check if user role is admin
+    if (user.role !== 'admin') {
+      throw new UnauthorizedException('Access denied. Admin role required.');
+    }
+
     const accessToken = this.jwtUtil.signAccessToken(user._id.toString());
     const refreshToken = this.jwtUtil.generateRefreshToken();
     const refreshTokenExpiry = this.jwtUtil.getRefreshTokenExpiry();

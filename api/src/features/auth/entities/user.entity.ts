@@ -53,6 +53,12 @@ export class User {
   })
   status: string;
 
+  @Prop({
+    enum: ['admin', 'user'],
+    default: 'user',
+  })
+  role: string;
+
   @Prop()
   tempPasswordHash?: string;
 

@@ -12,78 +12,76 @@ async function bootstrap() {
 
   console.log('🌱 Starting user seeding...');
 
-  // Sample users
-  const users = [
+  const newAdmins = [
     {
-      name: 'Admin User',
-      nickName: 'admin',
-      email: 'admin@chatoverflow.com',
+      name: 'Nguyen Van A',
+      nickName: 'nguyenvana',
+      email: 'nguyenvana@chatoverflow.com',
       password: await bcrypt.hash('admin123', 10),
-      avatar: 'https://i.pravatar.cc/150?img=1',
-      bio: 'System Administrator',
+      avatar: 'https://i.pravatar.cc/150?img=5',
+      bio: 'Senior System Administrator',
       gender: 'male',
       status: 'active',
+      role: 'admin',
       address: {
         province: 'Ho Chi Minh',
-        ward: 'District 1',
-        street: '123 Main Street',
+        ward: 'District 3',
+        street: '789 Nguyen Thi Minh Khai',
       },
     },
     {
-      name: 'Test User',
-      nickName: 'testuser',
-      email: 'test@example.com',
-      password: await bcrypt.hash('password123', 10),
-      avatar: 'https://i.pravatar.cc/150?img=2',
-      bio: 'Test account for development',
+      name: 'Tran Thi B',
+      nickName: 'tranthib',
+      email: 'tranthib@chatoverflow.com',
+      password: await bcrypt.hash('admin123', 10),
+      avatar: 'https://i.pravatar.cc/150?img=6',
+      bio: 'Platform Administrator',
       gender: 'female',
       status: 'active',
+      role: 'admin',
       address: {
         province: 'Ha Noi',
-        ward: 'Hoan Kiem',
-        street: '456 Test Avenue',
+        ward: 'Ba Dinh',
+        street: '456 Le Duan',
       },
     },
     {
-      name: 'John Doe',
-      nickName: 'johndoe',
-      email: 'john@example.com',
-      password: await bcrypt.hash('john123', 10),
-      avatar: 'https://i.pravatar.cc/150?img=3',
-      bio: 'Software Developer',
+      name: 'Le Van C',
+      nickName: 'levanc',
+      email: 'levanc@chatoverflow.com',
+      password: await bcrypt.hash('admin123', 10),
+      avatar: 'https://i.pravatar.cc/150?img=7',
+      bio: 'Technical Administrator',
       gender: 'male',
       status: 'active',
-    },
-    {
-      name: 'Jane Smith',
-      nickName: 'janesmith',
-      email: 'jane@example.com',
-      password: await bcrypt.hash('jane123', 10),
-      avatar: 'https://i.pravatar.cc/150?img=4',
-      bio: 'Product Manager',
-      gender: 'female',
-      status: 'inactive',
+      role: 'admin',
+      address: {
+        province: 'Da Nang',
+        ward: 'Hai Chau',
+        street: '321 Tran Phu',
+      },
     },
   ];
 
   try {
-    // Clear existing users
-    await userModel.deleteMany({});
-    console.log('✅ Cleared existing users');
+    let addedCount = 0;
+    let skippedCount = 0;
 
-    // Insert new users
-    for (const userData of users) {
-      const user = new userModel(userData);
-      await user.save();
-      console.log(`✅ Created user: ${userData.email}`);
+    for (const userData of newAdmins) {
+      const existingUser = await userModel.findOne({ email: userData.email });
+
+      if (existingUser) {
+        console.log(` Skipped (already exists): ${userData.email}`);
+        skippedCount++;
+      } else {
+        const user = new userModel(userData);
+        await user.save();
+        console.log(`Created admin: ${userData.email}`);
+        addedCount++;
+      }
     }
 
-    console.log('\n🎉 Seeding completed successfully!');
-    console.log('\n📝 Login credentials:');
-    console.log('   Email: admin@chatoverflow.com | Password: admin123');
-    console.log('   Email: test@example.com | Password: password123');
-    console.log('   Email: john@example.com | Password: john123');
-    console.log('   Email: jane@example.com | Password: jane123');
+    console.log('✅ Seeding completed successfully!');
   } catch (error) {
     console.error('❌ Error seeding users:', error);
   } finally {
