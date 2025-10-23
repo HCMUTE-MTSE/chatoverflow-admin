@@ -22,6 +22,7 @@ const links = [
     icon: DocumentDuplicateIcon,
   },
   { name: "Customers", href: "/dashboard/customers", icon: UserGroupIcon },
+  { name: "Tags", href: "/dashboard/tags", icon: UserGroupIcon },
   {
     name: "Reset Password",
     href: "/dashboard/reset-password",
