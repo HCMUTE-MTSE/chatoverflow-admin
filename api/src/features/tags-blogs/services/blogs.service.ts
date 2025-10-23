@@ -75,17 +75,24 @@ export class BlogsService {
     const totalComments = await this.blogCommentsService.getTotalCommentsByBlog(
       blog._id.toString(),
     );
+    const plain = blog.toObject(); // giữ nguyên ID gốc
 
     return plainToInstance(
       BlogResponseDto,
       {
-        ...blog.toObject(),
+        ...plain,
+        _id: plain._id.toString(),
         totalComments,
       },
       { excludeExtraneousValues: true },
     );
   }
+
   async deleteBlog(id: string): Promise<boolean> {
+    // Xóa tất cả comments của blog trước
+    await this.blogCommentsService.deleteCommentsByBlogId(id);
+
+    // Sau đó mới xóa blog
     const result = await this.blogModel.deleteOne({ _id: id }).exec();
     return result.deletedCount === 1;
   }

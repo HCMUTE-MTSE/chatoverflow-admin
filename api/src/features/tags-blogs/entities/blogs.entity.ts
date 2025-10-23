@@ -57,3 +57,12 @@ BlogSchema.pre('findOneAndUpdate', function (next) {
   }
   next();
 });
+
+BlogSchema.pre(
+  'deleteOne',
+  { document: false, query: true },
+  async function () {
+    const blogId = this.getFilter()['_id'];
+    await this.model.db.model('BlogComment').deleteMany({ blog: blogId });
+  },
+);

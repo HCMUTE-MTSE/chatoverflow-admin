@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CreateTagDto, TagResponseDto } from '../dto/tags.dto';
+import { CreateTagDto, TagResponseDto, UpdateTagDto } from '../dto/tags.dto';
 import { Model } from 'mongoose';
 import { Tag } from '../entities/tags.entity';
 import { plainToInstance } from 'class-transformer';
@@ -56,7 +56,7 @@ export class TagsService {
 
   async updateTag(
     id: string,
-    updateTagDto: Partial<CreateTagDto>,
+    updateTagDto: Partial<UpdateTagDto>,
   ): Promise<TagResponseDto | null> {
     const updatedTag = await this.tagModel
       .findByIdAndUpdate(id, updateTagDto, { new: true })

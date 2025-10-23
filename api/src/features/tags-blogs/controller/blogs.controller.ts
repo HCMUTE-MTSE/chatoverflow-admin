@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Query, // Thêm Query decorator
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/features/auth/guards/jwt-auth.guard';
@@ -15,11 +16,11 @@ import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 export class BlogsController {
   constructor(private readonly blogsService: BlogsService) {}
 
-  // Controller methods will be defined here in the future
   @Get()
   // @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async getBlogs(@Param('page') page: number, @Param('limit') limit: number) {
+  async getBlogs(@Query('page') page: number, @Query('limit') limit: number) {
+    // Đổi @Param thành @Query
     try {
       const { totalItems, data } = await this.blogsService.getBlogs(
         page || 1,
@@ -28,8 +29,8 @@ export class BlogsController {
       return ApiResponseDto.withPagination(
         'Blogs fetched successfully',
         data,
-        page,
-        limit,
+        page || 1, // Đảm bảo trả về giá trị mặc định
+        limit || 10,
         '/blogs',
         totalItems,
       );

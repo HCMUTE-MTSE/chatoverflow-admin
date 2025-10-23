@@ -17,11 +17,10 @@ import { useAuth } from "@/app/hooks/useAuth";
 import { useState } from "react";
 import { toast } from "sonner";
 
-interface DialogProps {
+interface DialogAddProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tag?: {
-    _id: string;
     name: string;
     displayName: string;
     description: string;
@@ -29,19 +28,18 @@ interface DialogProps {
   onSuccess?: () => void;
 }
 
-export function DialogEditTag({
+export function DialogAddTag({
   open,
   onOpenChange,
-  tag,
   onSuccess,
-}: DialogProps) {
+}: DialogAddProps) {
   const { accessToken } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!accessToken || !tag) {
+    if (!accessToken) {
       toast.error("Authentication required", {
         description: "No access token or tag data available",
       });
@@ -53,21 +51,19 @@ export function DialogEditTag({
     try {
       const formData = new FormData(e.currentTarget);
       const updateData = {
+        name: formData.get("name") as string,
         displayName: formData.get("displayName") as string,
         description: formData.get("description") as string,
       };
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tags/${tag._id}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updateData),
-        }
-      );
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tags`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateData),
+      });
 
       const result = await response.json();
 
@@ -75,7 +71,7 @@ export function DialogEditTag({
         throw new Error(result.message || "Failed to update tag");
       }
 
-      toast.success("Tag updated successfully!", {
+      toast.success("Tag created successfully!", {
         description: "Your changes have been saved",
         duration: 3000,
       });
@@ -87,8 +83,8 @@ export function DialogEditTag({
         onSuccess();
       }
     } catch (error) {
-      console.error("Error updating tag:", error);
-      toast.error("Failed to update tag", {
+      console.error("Error creating tag:", error);
+      toast.error("Failed to create tag", {
         description:
           error instanceof Error ? error.message : "An error occurred",
         duration: 3000,
@@ -102,9 +98,9 @@ export function DialogEditTag({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Tag</DialogTitle>
+          <DialogTitle>Add Tag</DialogTitle>
           <DialogDescription>
-            Make changes to your tag here. Click save when you&apos;re done.
+            Add a new tag to your collection.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -114,9 +110,10 @@ export function DialogEditTag({
               <Input
                 id="name-1"
                 name="name"
-                defaultValue={tag?.name || ""}
-                disabled
+                placeholder="Type name for tag"
+                required
                 className="bg-muted"
+                disabled={isSubmitting}
               />
             </div>
             <div className="grid gap-3">
@@ -124,7 +121,7 @@ export function DialogEditTag({
               <Input
                 id="displayName-1"
                 name="displayName"
-                defaultValue={tag?.displayName || ""}
+                placeholder="Type display name for tag"
                 required
                 disabled={isSubmitting}
               />
@@ -135,7 +132,6 @@ export function DialogEditTag({
                 placeholder="Type description of tag"
                 id="description-1"
                 name="description"
-                defaultValue={tag?.description || ""}
                 disabled={isSubmitting}
               />
             </div>

@@ -7,6 +7,8 @@ import {
   HttpStatus,
   Param,
   Post,
+  Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { TagsService } from '../services/tags.service';
@@ -20,9 +22,9 @@ export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
   @Get()
   @HttpCode(HttpStatus.OK)
-  // @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.UNAUTHORIZED)
-  async getTags(@Param('page') page: number, @Param('limit') limit: number) {
+  async getTags(@Query('page') page: number, @Query('limit') limit: number) {
     const { total, items } = await this.tagsService.getAllTags(page, limit);
     return ApiResponseDto.withPagination(
       'Tags fetched successfully',
@@ -53,6 +55,21 @@ export class TagsController {
   async createTag(@Body() createTagDto: CreateTagDto) {
     const newTag = await this.tagsService.createTag(createTagDto);
     return ApiResponseDto.success('Tag created successfully', newTag);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.UNAUTHORIZED)
+  async updateTag(
+    @Param('id') id: string,
+    @Body() updateTagDto: Partial<CreateTagDto>,
+  ) {
+    const updatedTag = await this.tagsService.updateTag(id, updateTagDto);
+    if (!updatedTag) {
+      return ApiResponseDto.error('Tag not found or could not be updated');
+    }
+    return ApiResponseDto.success('Tag updated successfully', updatedTag);
   }
 
   @Delete(':id')

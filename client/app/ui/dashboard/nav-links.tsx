@@ -5,6 +5,7 @@ import {
   HomeIcon,
   DocumentDuplicateIcon,
   KeyIcon,
+  TagIcon,
 } from "@heroicons/react/24/outline";
 
 import clsx from "clsx";
@@ -22,7 +23,8 @@ const links = [
     icon: DocumentDuplicateIcon,
   },
   { name: "Customers", href: "/dashboard/customers", icon: UserGroupIcon },
-  { name: "Tags", href: "/dashboard/tags", icon: UserGroupIcon },
+  { name: "Tags", href: "/dashboard/tags", icon: TagIcon },
+  { name: "Blogs", href: "/dashboard/blogs", icon: DocumentDuplicateIcon },
   {
     name: "Reset Password",
     href: "/dashboard/reset-password",

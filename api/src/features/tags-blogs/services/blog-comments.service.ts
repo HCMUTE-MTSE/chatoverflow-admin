@@ -46,7 +46,6 @@ export class BlogCommentsService {
 
   // Lấy total comments của một blog
   async getTotalCommentsByBlog(blogId: string): Promise<number> {
-    console.log('Fetching total comments for blogId:', blogId);
     return await this.blogCommentModel
       .countDocuments({ blog: new Types.ObjectId(blogId), isDeleted: false })
       .exec();
@@ -62,5 +61,10 @@ export class BlogCommentsService {
       .exec();
 
     return result.modifiedCount === 1;
+  }
+  async deleteCommentsByBlogId(blogId: string): Promise<void> {
+    await this.blogCommentModel
+      .deleteMany({ blog: new Types.ObjectId(blogId) })
+      .exec();
   }
 }
