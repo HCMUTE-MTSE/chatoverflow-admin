@@ -7,6 +7,7 @@ import { Question, QuestionSchema } from './entities/question.entity';
 import { Blog, BlogSchema } from './entities/blog.entity';
 import { User, UserSchema } from './entities/user.entity';
 import { Tag, TagSchema } from './entities/tag.entity';
+import { Answer, AnswerSchema } from './entities/answer.entity';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { Tag, TagSchema } from './entities/tag.entity';
       { name: Blog.name, schema: BlogSchema },
       { name: User.name, schema: UserSchema },
       { name: Tag.name, schema: TagSchema },
+      { name: Answer.name, schema: AnswerSchema },
     ]),
   ],
   controllers: [DashboardController],

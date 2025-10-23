@@ -6,12 +6,13 @@ export class DashboardService {
   constructor(private readonly dashboardRepository: DashboardRepository) {}
 
   async getDashboardStats() {
-    const [totalQuestions, totalBlogs, totalUsers, totalTags] =
+    const [totalQuestions, totalBlogs, totalUsers, totalTags, topUsers] =
       await Promise.all([
         this.dashboardRepository.countTotalQuestions(),
         this.dashboardRepository.countTotalBlogs(),
         this.dashboardRepository.countTotalUsers(),
         this.dashboardRepository.countTotalTags(),
+        this.dashboardRepository.getTopUsers(5),
       ]);
 
     return {
@@ -19,6 +20,7 @@ export class DashboardService {
       totalBlogs,
       totalUsers,
       totalTags,
+      topUsers,
     };
   }
 }
