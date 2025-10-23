@@ -63,6 +63,7 @@ export class AuthController {
           avatar: user.avatar,
           bio: user.bio,
           status: user.status,
+          role: user.role,
         },
         accessToken,
       });
