@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { lusitana } from "@/app/ui/fonts";
 import {
   KeyIcon,
@@ -8,12 +8,12 @@ import {
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "@/app/ui/button";
-import { useSession } from "next-auth/react";
-import { resetPasswordApi } from "@/app/lib/api/auth";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/hooks/useAuth";
 
 export default function ResetPasswordForm() {
-  const { data: session, status } = useSession();
+  const { accessToken, isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -22,9 +22,11 @@ export default function ResetPasswordForm() {
   const [isPending, setIsPending] = useState(false);
 
   // Redirect if not authenticated
-  if (status === "unauthenticated") {
-    redirect("/login");
-  }
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push("/login");
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +43,7 @@ export default function ResetPasswordForm() {
       return;
     }
 
-    if (!session?.accessToken) {
+    if (!accessToken) {
       setErrorMessage("Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.");
       return;
     }
@@ -49,7 +51,19 @@ export default function ResetPasswordForm() {
     setIsPending(true);
 
     try {
-      const result = await resetPasswordApi(session.accessToken, newPassword);
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+      const response = await fetch(`${API_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ newPassword }),
+      });
+
+      const result = await response.json();
 
       if (result.success) {
         setSuccessMessage(result.message || "Đổi mật khẩu thành công!");
@@ -67,7 +81,7 @@ export default function ResetPasswordForm() {
     }
   };
 
-  if (status === "loading") {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <p>Đang tải...</p>
