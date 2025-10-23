@@ -4,8 +4,9 @@ import { z } from "zod";
 import { sql } from "@vercel/postgres";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { signIn } from "@/auth";
+import { signIn, signOut } from "@/auth";
 import { AuthError } from "next-auth";
+import { logoutApi } from "./api/auth";
 
 const FormSchema = z.object({
   id: z.string(),
@@ -135,5 +136,17 @@ export async function authenticate(
       }
     }
     throw error;
+  }
+}
+
+export async function handleLogout() {
+  try {
+    // Call backend API to invalidate refresh token
+    await logoutApi();
+  } catch (error) {
+    console.error("Logout error:", error);
+  } finally {
+    // Always sign out from NextAuth
+    await signOut({ redirectTo: "/login" });
   }
 }
