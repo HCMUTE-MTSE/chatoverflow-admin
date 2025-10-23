@@ -67,7 +67,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           bio: token.bio as string,
           status: token.status as string,
         };
-        (session as any).accessToken = token.accessToken;
+        session.accessToken = token.accessToken as string;
       }
       return session;
     },
