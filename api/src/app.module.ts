@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { DashboardModule } from './features/dashboard/dashboard.module';
 import { AuthModule } from './features/auth/auth.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { AuthModule } from './features/auth/auth.module';
       }),
       inject: [ConfigService],
     }),
+    DashboardModule,
     AuthModule,
   ],
   controllers: [AppController],
