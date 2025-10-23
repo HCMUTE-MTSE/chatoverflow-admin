@@ -6,6 +6,8 @@ import { Answer, AnswerDocument } from './entities/answer.entity';
 import { Reply, ReplyDocument } from './entities/reply.entity';
 import { GetQuestionsDto, SortBy, SortOrder } from './dto/get-questions.dto';
 import { PaginatedQuestionsResponseDto } from './dto/question-response.dto';
+import { HideContentDto } from './dto/hide-content.dto';
+import { EmailService } from '../../common/services/email.service';
 
 @Injectable()
 export class QuestionsService {
@@ -16,6 +18,7 @@ export class QuestionsService {
     private answerModel: Model<AnswerDocument>,
     @InjectModel(Reply.name)
     private replyModel: Model<ReplyDocument>,
+    private emailService: EmailService,
   ) {}
 
   async findAll(dto: GetQuestionsDto): Promise<PaginatedQuestionsResponseDto> {
@@ -257,14 +260,12 @@ export class QuestionsService {
 
   // Answer-related methods
   async getAnswersForQuestion(questionId: string): Promise<Answer[]> {
-    console.log('Searching for answers with questionId:', questionId);
     const answers = await this.answerModel
       .find({ question: questionId })
       .sort({ createdAt: -1 })
       .populate('user', 'name email avatar')
       .populate('replyCount')
       .exec();
-    console.log('Found answers:', answers.length);
     return answers;
   }
 
@@ -285,27 +286,11 @@ export class QuestionsService {
 
   // Reply-related methods
   async getRepliesForAnswer(answerId: string): Promise<Reply[]> {
-    console.log('=== getRepliesForAnswer Debug ===');
-    console.log('Input answerId:', answerId);
-    console.log('answerId type:', typeof answerId);
-
     // Convert to ObjectId
     const answerObjectId = new Types.ObjectId(answerId);
-    console.log('Converted to ObjectId:', answerObjectId);
 
     // Check all replies in database
     const allReplies = await this.replyModel.find({}).exec();
-    console.log('Total replies in database:', allReplies.length);
-    console.log(
-      'Sample replies:',
-      allReplies.map((r) => ({
-        _id: r._id,
-        answer: r.answer,
-        answerStr: r.answer.toString(),
-        parent: r.parent,
-        content: r.content.substring(0, 30) + '...',
-      })),
-    );
 
     const replies = await this.replyModel
       .find({
@@ -316,27 +301,15 @@ export class QuestionsService {
       .populate('user', 'name email avatar')
       .exec();
 
-    console.log('Found replies for answer:', replies.length);
-    console.log(
-      'Query result:',
-      replies.map((r) => ({
-        _id: r._id,
-        content: r.content.substring(0, 50) + '...',
-        user: r.user,
-      })),
-    );
-
     return replies;
   }
 
   async getNestedReplies(parentReplyId: string): Promise<Reply[]> {
-    console.log('Getting nested replies for parent ID:', parentReplyId);
     const nestedReplies = await this.replyModel
       .find({ parent: parentReplyId })
       .sort({ createdAt: 1 }) // Chronological order for nested replies
       .populate('user', 'name email avatar')
       .exec();
-    console.log('Found nested replies count:', nestedReplies.length);
     return nestedReplies;
   }
 
@@ -370,14 +343,12 @@ export class QuestionsService {
     }
 
     // Get answers - use question._id to ensure ObjectId format
-    console.log('Getting answers for question ID:', id);
-    console.log('Question _id from DB:', question._id);
+
     const answers = await this.answerModel
       .find({ question: question._id })
       .sort({ createdAt: -1 })
       .populate('user', 'name email avatar')
       .exec();
-    console.log('Found answers count:', answers.length);
 
     // Get replies for each answer if requested
     if (includeReplies) {
@@ -406,5 +377,181 @@ export class QuestionsService {
       ...question.toObject(),
       answers: answers.map((a) => a.toObject()),
     };
+  }
+
+  // Hide/Unhide methods
+  async hideQuestion(
+    id: string,
+    hideContentDto: HideContentDto,
+  ): Promise<{ message: string }> {
+    const question = await this.questionModel
+      .findById(id)
+      .populate('user', 'email name')
+      .exec();
+
+    if (!question) {
+      throw new NotFoundException(`Question with ID "${id}" not found`);
+    }
+
+    // Update question to hidden status
+    await this.questionModel.findByIdAndUpdate(id, {
+      isHidden: true,
+      hideReason: hideContentDto.reason,
+      hiddenAt: new Date(),
+    });
+
+    // Send email notification if enabled
+    if (hideContentDto.sendEmail && question.user) {
+      const populatedUser = question.user as any;
+      try {
+        await this.emailService.sendContentHiddenNotification({
+          to: populatedUser.email,
+          subject: 'Your question has been hidden',
+          message:
+            'Your question has been hidden by our moderation team. Please review our community guidelines.',
+          contentType: 'question',
+          contentTitle: question.title,
+          hideReason: hideContentDto.reason,
+        });
+      } catch (error) {
+        console.error('Failed to send email notification:', error);
+        // Don't fail the hide operation if email fails
+      }
+    }
+
+    return { message: 'Question has been hidden successfully' };
+  }
+
+  async unhideQuestion(id: string): Promise<{ message: string }> {
+    const question = await this.questionModel.findById(id).exec();
+
+    if (!question) {
+      throw new NotFoundException(`Question with ID "${id}" not found`);
+    }
+
+    // Update question to unhidden status
+    await this.questionModel.findByIdAndUpdate(id, {
+      isHidden: false,
+      hideReason: null,
+      hiddenAt: null,
+    });
+
+    return { message: 'Question has been unhidden successfully' };
+  }
+
+  async hideAnswer(
+    id: string,
+    hideContentDto: HideContentDto,
+  ): Promise<{ message: string }> {
+    const answer = await this.answerModel
+      .findById(id)
+      .populate('user', 'email name')
+      .exec();
+
+    if (!answer) {
+      throw new NotFoundException(`Answer with ID "${id}" not found`);
+    }
+
+    // Update answer to hidden status
+    await this.answerModel.findByIdAndUpdate(id, {
+      isHidden: true,
+      hideReason: hideContentDto.reason,
+      hiddenAt: new Date(),
+    });
+
+    // Send email notification if enabled
+    if (hideContentDto.sendEmail && answer.user) {
+      const populatedUser = answer.user as any;
+      try {
+        await this.emailService.sendContentHiddenNotification({
+          to: populatedUser.email,
+          subject: 'Your answer has been hidden',
+          message:
+            'Your answer has been hidden by our moderation team. Please review our community guidelines.',
+          contentType: 'answer',
+          contentTitle: answer.content,
+          hideReason: hideContentDto.reason,
+        });
+      } catch (error) {
+        console.error('Failed to send email notification:', error);
+      }
+    }
+
+    return { message: 'Answer has been hidden successfully' };
+  }
+
+  async unhideAnswer(id: string): Promise<{ message: string }> {
+    const answer = await this.answerModel.findById(id).exec();
+
+    if (!answer) {
+      throw new NotFoundException(`Answer with ID "${id}" not found`);
+    }
+
+    // Update answer to unhidden status
+    await this.answerModel.findByIdAndUpdate(id, {
+      isHidden: false,
+      hideReason: null,
+      hiddenAt: null,
+    });
+
+    return { message: 'Answer has been unhidden successfully' };
+  }
+
+  async hideReply(
+    id: string,
+    hideContentDto: HideContentDto,
+  ): Promise<{ message: string }> {
+    const reply = await this.replyModel
+      .findById(id)
+      .populate('user', 'email name')
+      .exec();
+
+    if (!reply) {
+      throw new NotFoundException(`Reply with ID "${id}" not found`);
+    }
+
+    // Update reply to hidden status
+    await this.replyModel.findByIdAndUpdate(id, {
+      isHidden: true,
+      hideReason: hideContentDto.reason,
+      hiddenAt: new Date(),
+    });
+
+    // Send email notification if enabled
+    if (hideContentDto.sendEmail && reply.user) {
+      const populatedUser = reply.user as any;
+      try {
+        await this.emailService.sendContentHiddenNotification({
+          to: populatedUser.email,
+          subject: 'Your reply has been hidden',
+          message:
+            'Your reply has been hidden by our moderation team. Please review our community guidelines.',
+          contentType: 'reply',
+          contentTitle: reply.content,
+          hideReason: hideContentDto.reason,
+        });
+      } catch (error) {
+        console.error('Failed to send email notification:', error);
+      }
+    }
+
+    return { message: 'Reply has been hidden successfully' };
+  }
+
+  async unhideReply(id: string): Promise<{ message: string }> {
+    const reply = await this.replyModel.findById(id).exec();
+
+    if (!reply) {
+      throw new NotFoundException(`Reply with ID "${id}" not found`);
+    }
+
+    // Update reply to unhidden status
+    await this.replyModel.findByIdAndUpdate(id, {
+      isHidden: false,
+      hideReason: null,
+      hiddenAt: null,
+    });
+
+    return { message: 'Reply has been unhidden successfully' };
   }
 }

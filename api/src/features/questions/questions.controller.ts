@@ -4,6 +4,7 @@ import {
   Post,
   Param,
   Query,
+  Body,
   UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
@@ -13,11 +14,17 @@ import { PaginatedQuestionsResponseDto } from './dto/question-response.dto';
 import { Question } from './entities/question.entity';
 import { Answer } from './entities/answer.entity';
 import { Reply } from './entities/reply.entity';
-import { repl } from '@nestjs/core';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { HideContentDto } from './dto/hide-content.dto';
+import { EmailService } from '../../common/services/email.service';
 
 @Controller('questions')
 export class QuestionsController {
-  constructor(private readonly questionsService: QuestionsService) {}
+  constructor(
+    private readonly questionsService: QuestionsService,
+    private readonly emailService: EmailService,
+  ) {}
 
   @Get()
   async findAll(
@@ -98,5 +105,57 @@ export class QuestionsController {
   @Get('replies/:replyId')
   async getReply(@Param('replyId') replyId: string): Promise<Reply> {
     return this.questionsService.getReplyById(replyId);
+  }
+
+  // Admin endpoints for hiding/unhiding content
+  @Post(':id/hide')
+  @UseGuards(JwtAuthGuard)
+  @Roles('admin')
+  async hideQuestion(
+    @Param('id') id: string,
+    @Body() hideContentDto: HideContentDto,
+  ) {
+    return this.questionsService.hideQuestion(id, hideContentDto);
+  }
+
+  @Post(':id/unhide')
+  @Roles('admin')
+  @UseGuards(JwtAuthGuard)
+  async unhideQuestion(@Param('id') id: string) {
+    return this.questionsService.unhideQuestion(id);
+  }
+
+  @Post('answers/:id/hide')
+  @UseGuards(JwtAuthGuard)
+  @Roles('admin')
+  async hideAnswer(
+    @Param('id') id: string,
+    @Body() hideContentDto: HideContentDto,
+  ) {
+    return this.questionsService.hideAnswer(id, hideContentDto);
+  }
+
+  @Post('answers/:id/unhide')
+  @UseGuards(JwtAuthGuard)
+  @Roles('admin')
+  async unhideAnswer(@Param('id') id: string) {
+    return this.questionsService.unhideAnswer(id);
+  }
+
+  @Post('replies/:id/hide')
+  @UseGuards(JwtAuthGuard)
+  @Roles('admin')
+  async hideReply(
+    @Param('id') id: string,
+    @Body() hideContentDto: HideContentDto,
+  ) {
+    return this.questionsService.hideReply(id, hideContentDto);
+  }
+
+  @Post('replies/:id/unhide')
+  @UseGuards(JwtAuthGuard)
+  @Roles('admin')
+  async unhideReply(@Param('id') id: string) {
+    return this.questionsService.unhideReply(id);
   }
 }

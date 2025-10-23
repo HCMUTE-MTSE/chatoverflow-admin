@@ -27,6 +27,15 @@ export class Answer {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   downvotedBy: Types.ObjectId[];
 
+  @Prop({ default: false })
+  isHidden: boolean;
+
+  @Prop({ type: String, default: null })
+  hideReason: string | null;
+
+  @Prop({ type: Date, default: null })
+  hiddenAt: Date | null;
+
   // Virtual fields
   createdAt: Date;
   updatedAt: Date;

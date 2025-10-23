@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { fetchQuestions } from "@/app/lib/api/questions";
 import UserAvatar from "@/app/ui/user-avatar";
 import Link from "next/link";
@@ -7,6 +10,7 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
 } from "@heroicons/react/24/outline";
+import QuestionActions from "./question-actions";
 
 // Helper function to extract plain text from Tiptap JSON content
 function extractTextFromTiptap(content: string): string {
@@ -50,29 +54,121 @@ function formatTimeAgo(date: Date): string {
   return `${Math.floor(diffInSeconds / 2419200)} months ago`;
 }
 
-export default async function QuestionsTable({
-  query,
-  currentPage,
-  tags,
-  sortBy,
-  sortOrder,
-}: {
+function formatDistanceToNow(
+  date: Date,
+  options: { addSuffix: boolean }
+): import("react").ReactNode {
+  const now = new Date();
+  let diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const isFuture = diffInSeconds < 0;
+  diffInSeconds = Math.abs(diffInSeconds);
+
+  let value: number;
+  let unit: string;
+
+  if (diffInSeconds < 60) {
+    value = diffInSeconds;
+    unit = "second";
+  } else if (diffInSeconds < 3600) {
+    value = Math.floor(diffInSeconds / 60);
+    unit = "minute";
+  } else if (diffInSeconds < 86400) {
+    value = Math.floor(diffInSeconds / 3600);
+    unit = "hour";
+  } else if (diffInSeconds < 604800) {
+    value = Math.floor(diffInSeconds / 86400);
+    unit = "day";
+  } else if (diffInSeconds < 2419200) {
+    value = Math.floor(diffInSeconds / 604800);
+    unit = "week";
+  } else if (diffInSeconds < 29030400) {
+    value = Math.floor(diffInSeconds / 2419200);
+    unit = "month";
+  } else {
+    value = Math.floor(diffInSeconds / 29030400);
+    unit = "year";
+  }
+
+  const plural = value === 1 ? unit : `${unit}s`;
+  const result = `${value} ${plural}`;
+
+  if (!options?.addSuffix) return result;
+  return isFuture ? `in ${result}` : `${result} ago`;
+}
+
+interface QuestionsTableClientProps {
   query: string;
   currentPage: number;
   tags: string;
   sortBy: string;
   sortOrder: string;
-}) {
-  const questionsData = await fetchQuestions({
-    query,
-    page: currentPage,
-    limit: 10,
-    tags,
-    sortBy,
-    sortOrder,
-    includeUser: true,
-    includeAnswerCount: true,
-  });
+}
+
+export default function QuestionsTableClient({
+  query,
+  currentPage,
+  tags,
+  sortBy,
+  sortOrder,
+}: QuestionsTableClientProps) {
+  const [questionsData, setQuestionsData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadQuestions = async () => {
+    try {
+      setLoading(true);
+      const data = await fetchQuestions({
+        query,
+        page: currentPage,
+        limit: 10,
+        tags,
+        sortBy,
+        sortOrder,
+        includeUser: true,
+        includeAnswerCount: true,
+      });
+      setQuestionsData(data);
+    } catch (error) {
+      console.error("Error loading questions:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadQuestions();
+  }, [query, currentPage, tags, sortBy, sortOrder]);
+
+  if (loading) {
+    return (
+      <div className="mt-6 flow-root">
+        <div className="inline-block min-w-full align-middle">
+          <div className="rounded-lg bg-gray-50 p-2 md:pt-0">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded mb-4"></div>
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-16 bg-gray-200 rounded mb-2"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!questionsData) {
+    return (
+      <div className="mt-6 flow-root">
+        <div className="inline-block min-w-full align-middle">
+          <div className="rounded-lg bg-gray-50 p-2 md:pt-0">
+            <p className="text-center text-gray-500 py-8">
+              Failed to load questions
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const {
     data: questions,
@@ -81,48 +177,6 @@ export default async function QuestionsTable({
     hasNextPage,
     hasPrevPage,
   } = questionsData;
-
-  function formatDistanceToNow(
-    date: Date,
-    options: { addSuffix: boolean }
-  ): import("react").ReactNode {
-    const now = new Date();
-    let diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    const isFuture = diffInSeconds < 0;
-    diffInSeconds = Math.abs(diffInSeconds);
-
-    let value: number;
-    let unit: string;
-
-    if (diffInSeconds < 60) {
-      value = diffInSeconds;
-      unit = "second";
-    } else if (diffInSeconds < 3600) {
-      value = Math.floor(diffInSeconds / 60);
-      unit = "minute";
-    } else if (diffInSeconds < 86400) {
-      value = Math.floor(diffInSeconds / 3600);
-      unit = "hour";
-    } else if (diffInSeconds < 604800) {
-      value = Math.floor(diffInSeconds / 86400);
-      unit = "day";
-    } else if (diffInSeconds < 2419200) {
-      value = Math.floor(diffInSeconds / 604800);
-      unit = "week";
-    } else if (diffInSeconds < 29030400) {
-      value = Math.floor(diffInSeconds / 2419200);
-      unit = "month";
-    } else {
-      value = Math.floor(diffInSeconds / 29030400);
-      unit = "year";
-    }
-
-    const plural = value === 1 ? unit : `${unit}s`;
-    const result = `${value} ${plural}`;
-
-    if (!options?.addSuffix) return result;
-    return isFuture ? `in ${result}` : `${result} ago`;
-  }
 
   return (
     <div className="mt-6 flow-root">
@@ -140,18 +194,35 @@ export default async function QuestionsTable({
 
           {/* Mobile view */}
           <div className="md:hidden">
-            {questions?.map((question) => (
-              <Link
+            {questions?.map((question: any) => (
+              <div
                 key={question._id}
-                href={`/dashboard/questions/${question._id}`}
-                className="mb-2 block w-full rounded-md bg-white p-4 hover:bg-gray-50"
+                className={`mb-2 block w-full rounded-md bg-white p-4 ${
+                  question.isHidden
+                    ? "bg-red-50 border border-red-200"
+                    : "hover:bg-gray-50"
+                }`}
               >
                 <div className="flex items-center justify-between border-b pb-4">
                   <div>
                     <div className="mb-2 flex items-center">
                       <UserAvatar user={question.user} size="sm" showName />
                     </div>
-                    <p className="text-sm font-medium">{question.title}</p>
+                    <Link
+                      href={`/dashboard/questions/${question._id}`}
+                      className={`text-sm font-medium ${
+                        question.isHidden
+                          ? "text-red-600"
+                          : "text-blue-600 hover:text-blue-800"
+                      }`}
+                    >
+                      {question.title}
+                      {question.isHidden && (
+                        <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                          Hidden
+                        </span>
+                      )}
+                    </Link>
                   </div>
                 </div>
                 <div className="flex w-full items-center justify-between pt-4">
@@ -175,7 +246,7 @@ export default async function QuestionsTable({
                 </div>
                 {question.tags.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
-                    {question.tags.slice(0, 3).map((tag) => (
+                    {question.tags.slice(0, 3).map((tag: string) => (
                       <span
                         key={tag}
                         className="inline-flex rounded-full bg-blue-100 px-2 text-xs font-semibold text-blue-800"
@@ -190,7 +261,13 @@ export default async function QuestionsTable({
                     )}
                   </div>
                 )}
-              </Link>
+                <div className="mt-3 pt-3 border-t">
+                  <QuestionActions
+                    question={question}
+                    onUpdate={loadQuestions}
+                  />
+                </div>
+              </div>
             ))}
           </div>
 
@@ -219,18 +296,29 @@ export default async function QuestionsTable({
               </tr>
             </thead>
             <tbody className="bg-white">
-              {questions?.map((question, index) => (
+              {questions?.map((question: any, index: number) => (
                 <tr
                   key={question._id}
-                  className="w-full border-b py-3 text-sm last-of-type:border-none [&:first-child>td:first-child]:rounded-tl-lg [&:first-child>td:last-child]:rounded-tr-lg [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg"
+                  className={`w-full border-b py-3 text-sm last-of-type:border-none [&:first-child>td:first-child]:rounded-tl-lg [&:first-child>td:last-child]:rounded-tr-lg [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg ${
+                    question.isHidden ? "bg-red-50" : ""
+                  }`}
                 >
                   <td className="whitespace-nowrap py-3 pl-6 pr-3">
                     <div className="flex flex-col">
                       <Link
                         href={`/dashboard/questions/${question._id}`}
-                        className="truncate font-semibold text-blue-600 hover:text-blue-800"
+                        className={`truncate font-semibold ${
+                          question.isHidden
+                            ? "text-red-600"
+                            : "text-blue-600 hover:text-blue-800"
+                        }`}
                       >
                         {question.title}
+                        {question.isHidden && (
+                          <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                            Hidden
+                          </span>
+                        )}
                       </Link>
                       <p className="text-xs text-gray-500 mt-1 line-clamp-2">
                         {(() => {
@@ -242,6 +330,11 @@ export default async function QuestionsTable({
                             : plainText;
                         })()}
                       </p>
+                      {question.isHidden && question.hideReason && (
+                        <p className="text-xs text-red-600 mt-1">
+                          <strong>Reason:</strong> {question.hideReason}
+                        </p>
+                      )}
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
@@ -283,7 +376,7 @@ export default async function QuestionsTable({
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
                     <div className="flex flex-wrap gap-1 max-w-32">
-                      {question.tags.slice(0, 2).map((tag) => (
+                      {question.tags.slice(0, 2).map((tag: string) => (
                         <span
                           key={tag}
                           className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800"
@@ -311,15 +404,10 @@ export default async function QuestionsTable({
                     </div>
                   </td>
                   <td className="whitespace-nowrap py-3 pl-6 pr-3">
-                    <div className="flex justify-end gap-3">
-                      <Link
-                        href={`/dashboard/questions/${question._id}`}
-                        className="rounded-md border p-2 hover:bg-gray-100"
-                      >
-                        <span className="sr-only">View</span>
-                        <EyeIcon className="w-4" />
-                      </Link>
-                    </div>
+                    <QuestionActions
+                      question={question}
+                      onUpdate={loadQuestions}
+                    />
                   </td>
                 </tr>
               ))}

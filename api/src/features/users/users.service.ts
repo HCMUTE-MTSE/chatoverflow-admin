@@ -9,12 +9,16 @@ import { User, UserDocument } from '../auth/entities/user.entity';
 import { GetUsersDto, SortBy, SortOrder } from './dto/get-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginatedUsersResponseDto } from './dto/user-response.dto';
+import { BanUserDto } from './dto/ban-user.dto';
+import { UnbanUserDto } from './dto/unban-user.dto';
+import { EmailService } from '../../common/services/email.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
+    private emailService: EmailService,
   ) {}
 
   async findAll(dto: GetUsersDto): Promise<PaginatedUsersResponseDto> {
@@ -239,5 +243,223 @@ export class UsersService {
         },
       },
     ]);
+  }
+
+  /**
+   * Ban user với lý do và gửi email thông báo
+   */
+  async banUser(
+    id: string,
+    banUserDto: BanUserDto,
+  ): Promise<{ message: string; user: User }> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid user ID format');
+    }
+
+    const user = await this.userModel.findById(id).exec();
+    if (!user) {
+      throw new NotFoundException(`User with ID "${id}" not found`);
+    }
+
+    if (user.status === 'banned') {
+      throw new BadRequestException('User is already banned');
+    }
+
+    // Prevent banning admin users
+    if (user.role === 'admin') {
+      throw new BadRequestException('Cannot ban admin users');
+    }
+
+    const banDate = new Date();
+    let banExpiresAt: Date | null = null;
+
+    // Calculate ban expiry date (0 = permanent)
+    if (banUserDto.banDuration && banUserDto.banDuration > 0) {
+      banExpiresAt = new Date();
+
+      // Handle special case for seconds (for testing)
+      if (banUserDto.banDuration === 5) {
+        // 5 seconds for testing
+        banExpiresAt.setTime(banExpiresAt.getTime() + 5 * 1000);
+      } else {
+        // Days calculation for normal durations
+        banExpiresAt.setDate(banExpiresAt.getDate() + banUserDto.banDuration);
+      }
+    }
+
+    // Update user status to banned
+    const updatedUser = await this.userModel
+      .findByIdAndUpdate(
+        id,
+        {
+          status: 'banned',
+          banReason: banUserDto.reason,
+          bannedAt: banDate,
+          banExpiresAt: banExpiresAt,
+        },
+        { new: true },
+      )
+      .select('-password -tempPasswordHash')
+      .exec();
+
+    // Send email notification if requested
+    if (banUserDto.sendEmail !== false) {
+      try {
+        await this.emailService.sendUserBannedNotification({
+          to: user.email,
+          userName: user.name,
+          reason: banUserDto.reason,
+          banDate: banDate,
+          banExpiresAt: banExpiresAt,
+        });
+      } catch (error) {
+        console.error('Failed to send ban notification email:', error);
+        // Don't throw error, ban operation should still succeed
+      }
+    }
+
+    const durationText =
+      banUserDto.banDuration === 0 || !banUserDto.banDuration
+        ? 'permanently'
+        : banUserDto.banDuration === 5
+          ? 'for 5 seconds'
+          : `for ${banUserDto.banDuration} day${banUserDto.banDuration !== 1 ? 's' : ''}`;
+
+    return {
+      message: `User "${user.name}" has been banned ${durationText}`,
+      user: updatedUser,
+    };
+  }
+
+  /**
+   * Unban user và gửi email thông báo
+   */
+  async unbanUser(
+    id: string,
+    unbanUserDto: UnbanUserDto,
+  ): Promise<{ message: string; user: User }> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid user ID format');
+    }
+
+    const user = await this.userModel.findById(id).exec();
+    if (!user) {
+      throw new NotFoundException(`User with ID "${id}" not found`);
+    }
+
+    if (user.status !== 'banned') {
+      throw new BadRequestException('User is not currently banned');
+    }
+
+    // Update user status to active
+    const updatedUser = await this.userModel
+      .findByIdAndUpdate(
+        id,
+        {
+          status: 'active',
+          $unset: {
+            banReason: 1,
+            bannedAt: 1,
+          },
+          unbannedAt: new Date(),
+        },
+        { new: true },
+      )
+      .select('-password -tempPasswordHash')
+      .exec();
+
+    // Send email notification if requested
+    if (unbanUserDto.sendEmail !== false) {
+      try {
+        await this.emailService.sendUserUnbannedNotification({
+          to: user.email,
+          userName: user.name,
+          unbanDate: new Date(),
+        });
+      } catch (error) {
+        console.error('Failed to send unban notification email:', error);
+        // Don't throw error, unban operation should still succeed
+      }
+    }
+
+    return {
+      message: `User "${user.name}" has been unbanned successfully`,
+      user: updatedUser,
+    };
+  }
+
+  /**
+   * Auto-unban users whose ban has expired
+   */
+  async autoUnbanExpiredUsers(): Promise<{
+    count: number;
+    unbannedUsers: string[];
+  }> {
+    const now = new Date();
+
+    // Find users whose ban has expired
+    const expiredBannedUsers = await this.userModel
+      .find({
+        status: 'banned',
+        banExpiresAt: { $lte: now, $ne: null },
+      })
+      .exec();
+
+    const unbannedUsers: string[] = [];
+
+    for (const user of expiredBannedUsers) {
+      try {
+        // Update user status to active
+        await this.userModel
+          .findByIdAndUpdate(user._id, {
+            status: 'active',
+            $unset: {
+              banReason: 1,
+              bannedAt: 1,
+              banExpiresAt: 1,
+            },
+            unbannedAt: new Date(),
+          })
+          .exec();
+
+        // Send unban notification email
+        try {
+          await this.emailService.sendUserUnbannedNotification({
+            to: user.email,
+            userName: user.name,
+            unbanDate: new Date(),
+          });
+        } catch (emailError) {
+          console.error(
+            `Failed to send unban email to ${user.email}:`,
+            emailError,
+          );
+        }
+
+        unbannedUsers.push(user.name);
+        console.log(`Auto-unbanned user: ${user.name} (${user.email})`);
+      } catch (error) {
+        console.error(`Failed to auto-unban user ${user.name}:`, error);
+      }
+    }
+
+    return {
+      count: unbannedUsers.length,
+      unbannedUsers,
+    };
+  }
+
+  /**
+   * Get users with temporary bans and their expiry info
+   */
+  async getTemporaryBannedUsers(): Promise<any[]> {
+    return this.userModel
+      .find({
+        status: 'banned',
+        banExpiresAt: { $ne: null },
+      })
+      .select('name email banReason bannedAt banExpiresAt')
+      .sort({ banExpiresAt: 1 })
+      .exec();
   }
 }

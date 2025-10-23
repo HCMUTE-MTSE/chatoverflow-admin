@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
-import { PencilIcon } from "@heroicons/react/24/outline";
+
+import {
+  PencilIcon,
+  NoSymbolIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import EditUserModal from "@/app/ui/users/edit-modal";
+import BanUserModal from "@/app/ui/users/ban-user-modal";
 import { ToastContainer, ToastProps } from "@/app/ui/toast";
+import { useAuth } from "@/app/hooks/useAuth";
 
 interface User {
   _id: string;
@@ -22,6 +29,8 @@ interface User {
   gender: "male" | "female" | "other";
   role: "admin" | "user";
   status: "active" | "inactive" | "banned" | "pending";
+  banReason?: string;
+  bannedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -36,9 +45,10 @@ export default function UserActions({
   className = "",
 }: UserActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const { accessToken, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isBanModalOpen, setIsBanModalOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastProps[]>([]);
-  const { data: session } = useSession();
 
   const addToast = (toast: Omit<ToastProps, "id" | "onRemove">) => {
     const id = Date.now().toString();
@@ -60,9 +70,7 @@ export default function UserActions({
 
   const handleSaveUser = async (userId: string, userData: Partial<User>) => {
     try {
-      const token = (session as any)?.accessToken;
-      console.log("token", token);
-      if (!token) {
+      if (!accessToken) {
         throw new Error("No access token available. Please login again.");
       }
 
@@ -72,7 +80,7 @@ export default function UserActions({
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify(userData),
         }
@@ -123,9 +131,99 @@ export default function UserActions({
     setIsEditModalOpen(false);
   };
 
+  const handleBan = async (
+    reason: string,
+    sendEmail: boolean,
+    banDuration?: number
+  ) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/users/${user._id}/ban`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ reason, sendEmail, banDuration }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to ban user");
+      }
+
+      const data = await response.json();
+
+      addToast({
+        type: "success",
+        title: "Success!",
+        message: data.message || "User banned successfully",
+      });
+
+      // Refresh the page to show updated data after a short delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error: any) {
+      console.error("Error banning user:", error);
+      addToast({
+        type: "error",
+        title: "Error!",
+        message: error.message || "Failed to ban user",
+      });
+      throw error; // Re-throw to let modal handle it
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUnban = async () => {
+    if (!confirm(`Are you sure you want to unban ${user.name}?`)) return;
+
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/users/${user._id}/unban`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ sendEmail: true }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to unban user");
+      }
+
+      const data = await response.json();
+
+      addToast({
+        type: "success",
+        title: "Success!",
+        message: data.message || "User unbanned successfully",
+      });
+
+      // Refresh the page to show updated data after a short delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error: any) {
+      console.error("Error unbanning user:", error);
+      addToast({
+        type: "error",
+        title: "Error!",
+        message: error.message || "Failed to unban user",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <>
       <div className={`flex justify-end gap-2 ${className}`}>
+        {/* Edit Button */}
         <button
           onClick={handleEdit}
           disabled={isLoading}
@@ -134,6 +232,41 @@ export default function UserActions({
         >
           <PencilIcon className="w-4 h-4" />
         </button>
+
+        {/* Ban/Unban Actions - Don't show for admin users */}
+        {user.role !== "admin" && (
+          <>
+            {user.status === "banned" ? (
+              <button
+                onClick={handleUnban}
+                disabled={isLoading}
+                className="rounded-md border border-green-300 p-2 text-green-600 hover:bg-green-50 disabled:opacity-50"
+                title={`Unban user${
+                  user.banReason ? ` (Banned for: ${user.banReason})` : ""
+                }`}
+              >
+                <CheckCircleIcon className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsBanModalOpen(true)}
+                disabled={isLoading}
+                className="rounded-md border border-red-300 p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                title="Ban user"
+              >
+                <NoSymbolIcon className="w-4 h-4" />
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Admin indicator */}
+        {user.role === "admin" && (
+          <div className="flex items-center text-xs text-gray-500 px-2">
+            <ExclamationTriangleIcon className="w-4 h-4 mr-1" />
+            Admin
+          </div>
+        )}
       </div>
 
       {/* Edit Modal */}
@@ -142,6 +275,16 @@ export default function UserActions({
         isOpen={isEditModalOpen}
         onClose={handleCloseModal}
         onSave={handleSaveUser}
+      />
+
+      {/* Ban Modal */}
+      <BanUserModal
+        isOpen={isBanModalOpen}
+        onClose={() => setIsBanModalOpen(false)}
+        onBan={handleBan}
+        userName={user.name}
+        userEmail={user.email}
+        loading={isLoading}
       />
 
       {/* Toast Container */}

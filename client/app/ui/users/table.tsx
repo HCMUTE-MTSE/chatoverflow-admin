@@ -1,7 +1,11 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import UserAvatar from "@/app/ui/user-avatar";
-import UserActions from "@/app/ui/users/user-actions";
+import Image from "next/image";
+import UserActions from "./user-actions";
 import { format } from "date-fns";
-import { auth } from "@/auth";
+import { useAuth } from "@/app/hooks/useAuth";
 
 interface User {
   _id: string;
@@ -19,6 +23,9 @@ interface User {
   gender: "male" | "female" | "other";
   role: "admin" | "user";
   status: "active" | "inactive" | "banned" | "pending";
+  banReason?: string;
+  bannedAt?: string;
+  banExpiresAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,9 +33,8 @@ interface User {
 interface UsersResponse {
   data: User[];
   total: number;
-  page: number;
-  limit: number;
   totalPages: number;
+  page: number;
   hasNextPage: boolean;
   hasPrevPage: boolean;
 }
@@ -41,53 +47,6 @@ interface UsersTableProps {
   gender: string;
   sortBy: string;
   sortOrder: string;
-}
-
-async function fetchUsers(
-  search: string,
-  currentPage: number,
-  role: string,
-  status: string,
-  gender: string,
-  sortBy: string,
-  sortOrder: string
-): Promise<UsersResponse> {
-  try {
-    const session = await auth();
-
-    if (!session?.accessToken) {
-      throw new Error("No access token available");
-    }
-
-    const queryParams = new URLSearchParams();
-    if (search) queryParams.append("search", search);
-    if (role) queryParams.append("role", role);
-    if (status) queryParams.append("status", status);
-    if (gender) queryParams.append("gender", gender);
-    if (sortBy) queryParams.append("sortBy", sortBy);
-    if (sortOrder) queryParams.append("sortOrder", sortOrder);
-    queryParams.append("page", currentPage.toString());
-    queryParams.append("limit", "10");
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/users?${queryParams.toString()}`,
-      {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        cache: "no-store",
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch users: ${response.statusText}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    throw error;
-  }
 }
 
 const roleColors = {
@@ -108,7 +67,7 @@ const statusColors = {
   pending: "bg-yellow-100 text-yellow-800",
 };
 
-export default async function UsersTable({
+export default function UsersTable({
   search,
   currentPage,
   role,
@@ -117,23 +76,60 @@ export default async function UsersTable({
   sortBy,
   sortOrder,
 }: UsersTableProps) {
-  const usersData = await fetchUsers(
+  const { accessToken } = useAuth();
+  const [usersData, setUsersData] = useState<UsersResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        setLoading(true);
+        const queryParams = new URLSearchParams();
+        if (search) queryParams.append("search", search);
+        if (role) queryParams.append("role", role);
+        if (status) queryParams.append("status", status);
+        if (gender) queryParams.append("gender", gender);
+        if (sortBy) queryParams.append("sortBy", sortBy);
+        if (sortOrder) queryParams.append("sortOrder", sortOrder);
+        queryParams.append("page", currentPage.toString());
+        queryParams.append("limit", "10");
+
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/users?${queryParams.toString()}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        setUsersData(data);
+      } catch (err) {
+        console.error("Error fetching users:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (accessToken) fetchUsers();
+  }, [
+    accessToken,
     search,
     currentPage,
     role,
     status,
     gender,
     sortBy,
-    sortOrder
-  );
+    sortOrder,
+  ]);
 
-  if (!usersData || usersData.data.length === 0) {
+  if (loading) return <p className="mt-6 text-center">Loading users...</p>;
+  if (!usersData || usersData.data.length === 0)
     return (
-      <div className="mt-6 text-center">
-        <p className="text-gray-500">No users found.</p>
-      </div>
+      <div className="mt-6 text-center text-gray-500">No users found.</div>
     );
-  }
 
   return (
     <div className="mt-6 flow-root">
@@ -274,13 +270,45 @@ export default async function UsersTable({
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        statusColors[user.status as keyof typeof statusColors]
-                      }`}
-                    >
-                      {user.status}
-                    </span>
+                    <div className="flex flex-col">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                          statusColors[user.status as keyof typeof statusColors]
+                        }`}
+                      >
+                        {user.status}
+                      </span>
+                      {user.status === "banned" && (
+                        <div className="mt-1 text-xs space-y-1">
+                          {user.banReason && (
+                            <div
+                              className="text-red-600 max-w-32 truncate"
+                              title={user.banReason}
+                            >
+                              Reason: {user.banReason}
+                            </div>
+                          )}
+                          {user.banExpiresAt ? (
+                            <div
+                              className="text-orange-600"
+                              title={`Auto-unban: ${new Date(
+                                user.banExpiresAt
+                              ).toLocaleString()}`}
+                            >
+                              Expires:{" "}
+                              {format(
+                                new Date(user.banExpiresAt),
+                                "MMM dd, yyyy"
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-red-700 font-medium">
+                              Permanent
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
                     <span

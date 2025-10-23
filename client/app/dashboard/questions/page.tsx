@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import QuestionsTable from "@/app/ui/questions/table";
+import QuestionsTableClient from "@/app/ui/questions/table-client";
 import QuestionsSearch from "@/app/ui/questions/search";
 import { QuestionsTableSkeleton } from "@/app/ui/skeletons";
 import { Suspense } from "react";
@@ -36,18 +36,13 @@ export default async function Page({
         <QuestionsSearch />
       </div>
 
-      <Suspense
-        key={query + currentPage + tags + sortBy + sortOrder}
-        fallback={<QuestionsTableSkeleton />}
-      >
-        <QuestionsTable
-          query={query}
-          currentPage={currentPage}
-          tags={tags}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
-        />
-      </Suspense>
+      <QuestionsTableClient
+        query={query}
+        currentPage={currentPage}
+        tags={tags}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+      />
     </div>
   );
 }
