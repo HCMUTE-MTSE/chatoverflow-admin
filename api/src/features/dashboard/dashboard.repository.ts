@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Question } from './entities/question.entity';
-import { Blog } from './entities/blog.entity';
-import { User } from './entities/user.entity';
-import { Tag } from './entities/tag.entity';
-import { Answer } from './entities/answer.entity';
+import { Question } from '../questions/entities/question.entity';
+import { Blog } from '../tags-blogs/entities/blogs.entity';
+import { User } from '../auth/entities/user.entity';
+import { Tag } from '../tags-blogs/entities/tags.entity';
+import { Answer } from '../questions/entities/answer.entity';
 
 @Injectable()
 export class DashboardRepository {
