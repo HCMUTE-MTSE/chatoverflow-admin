@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { DashboardModule } from './features/dashboard/dashboard.module';
 import { AuthModule } from './features/auth/auth.module';
 import { QuestionsModule } from './features/questions/questions.module';
 import { UsersModule } from './features/users/users.module';
@@ -25,6 +26,7 @@ import { TagsBlogsModule } from './features/tags-blogs/tags-blogs.module';
       }),
       inject: [ConfigService],
     }),
+    DashboardModule,
     AuthModule,
     QuestionsModule,
     UsersModule,
