@@ -41,8 +41,7 @@ export default function LoginForm() {
          const data = await response.json();
 
          if (!response.ok || !data.success) {
-            router.push('/dashboard');
-            // throw new Error(data.message || 'Login failed');
+            throw new Error(data.message || 'Login failed');
          }
 
          // Save accessToken and user data to localStorage
@@ -57,12 +56,10 @@ export default function LoginForm() {
                status: data.data.user.status,
             });
 
-            // Redirect to dashboard
             router.push('/dashboard');
             router.refresh();
          } else {
-            router.push('/dashboard');
-            // throw new Error('Invalid response from server');
+            throw new Error('Invalid response from server');
          }
       } catch (error) {
          console.error('Login error:', error);
