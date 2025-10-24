@@ -24,7 +24,7 @@ export class LoginService {
     }
 
     // Check if user role is admin
-    if (user.role !== 'admin') {
+    if (user.toObject().role !== 'admin') {
       throw new UnauthorizedException('Access denied. Admin role required.');
     }
 
