@@ -1,79 +1,48 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { authConfig } from "./auth.config";
-import { z } from "zod";
-import { loginApi } from "@/app/lib/api/auth";
+import NextAuth from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
+import { authConfig } from './auth.config';
+import { z } from 'zod';
+import { sql } from '@vercel/postgres';
+import type { User } from '@/app/lib/definitions';
+import bcrypt from 'bcrypt';
 
-export const { auth, signIn, signOut, handlers } = NextAuth({
-  ...authConfig,
-  providers: [
-    Credentials({
-      async authorize(credentials) {
-        const parsedCredentials = z
-          .object({
-            email: z.string().email(),
-            password: z.string().min(6),
-          })
-          .safeParse(credentials);
+async function getUser(email: string): Promise<User | undefined> {
+   try {
+      const user = await sql<User>`SELECT * FROM users WHERE email=${email}`;
+      return user.rows[0];
+   } catch (error) {
+      console.error('Failed to fetch user:', error);
+      throw new Error('Failed to fetch user.');
+   }
+}
 
-        if (parsedCredentials.success) {
-          const { email, password } = parsedCredentials.data;
+export const { auth, signIn, signOut } = NextAuth({
+   ...authConfig,
+   providers: [
+      Credentials({
+         async authorize(credentials) {
+            const parsedCredentials = z
+               .object({
+                  email: z.string().email(),
+                  password: z.string().min(6),
+               })
+               .safeParse(credentials);
 
-          // Call backend API
-          const result = await loginApi(email, password);
+            if (parsedCredentials.success) {
+               const { email, password } = parsedCredentials.data;
+               const user = await getUser(email);
+               if (!user) return null;
 
-          if (result.success && result.data) {
-            // Return user data with accessToken
-            return {
-              id: result.data.user._id,
-              name: result.data.user.name,
-              email: result.data.user.email,
-              avatar: result.data.user.avatar,
-              bio: result.data.user.bio,
-              status: result.data.user.status,
-              accessToken: result.data.accessToken,
-            };
-          }
-        }
+               const passwordsMatch = await bcrypt.compare(
+                  password,
+                  user.password
+               );
+               if (passwordsMatch) return user;
+            }
 
-        console.log("Invalid credentials");
-        return null;
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }) {
-      // Add accessToken to JWT token on sign in
-      if (user) {
-        token.accessToken = (user as any).accessToken;
-        token.id = user.id;
-        token.name = user.name;
-        token.email = user.email;
-        token.avatar = (user as any).avatar;
-        token.bio = (user as any).bio;
-        token.status = (user as any).status;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      // Add user data and accessToken to session
-      if (token) {
-        session.user = {
-          ...session.user,
-          id: token.id as string,
-          name: token.name as string,
-          email: token.email as string,
-          avatar: token.avatar as string,
-          bio: token.bio as string,
-          status: token.status as string,
-        };
-        (session as any).accessToken = token.accessToken;
-      }
-      return session;
-    },
-  },
-  session: {
-    strategy: "jwt",
-    maxAge: 15 * 60, // 15 minutes (match backend ACCESS_TOKEN_EXPIRES)
-  },
+            console.log('Invalid credentials');
+            return null;
+         },
+      }),
+   ],
 });
