@@ -5,6 +5,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './features/auth/auth.module';
+import { QuestionsModule } from './features/questions/questions.module';
+import { UsersModule } from './features/users/users.module';
 import { TagsBlogsModule } from './features/tags-blogs/tags-blogs.module';
 
 @Module({
@@ -24,6 +26,8 @@ import { TagsBlogsModule } from './features/tags-blogs/tags-blogs.module';
       inject: [ConfigService],
     }),
     AuthModule,
+    QuestionsModule,
+    UsersModule,
     TagsBlogsModule,
   ],
   controllers: [AppController],

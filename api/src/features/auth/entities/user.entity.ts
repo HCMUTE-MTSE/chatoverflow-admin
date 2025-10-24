@@ -62,6 +62,18 @@ export class User {
   @Prop()
   tempPasswordHash?: string;
 
+  @Prop()
+  banReason?: string;
+
+  @Prop()
+  bannedAt?: Date;
+
+  @Prop()
+  banExpiresAt?: Date; // Thời gian hết hạn ban (null = permanent)
+
+  @Prop()
+  unbannedAt?: Date;
+
   // Method to compare password (will be added to document)
   comparePassword?: (plain: string) => Promise<boolean>;
 }

@@ -1,6 +1,6 @@
 // Loading animation
 const shimmer =
-  'before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/60 before:to-transparent';
+  "before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/60 before:to-transparent";
 
 export function CardSkeleton() {
   return (
@@ -211,6 +211,233 @@ export function InvoicesTableSkeleton() {
               <TableRowSkeleton />
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Questions-related skeletons
+export function QuestionRowSkeleton() {
+  return (
+    <tr className="w-full border-b border-gray-100 last-of-type:border-none [&:first-child>td:first-child]:rounded-tl-lg [&:first-child>td:last-child]:rounded-tr-lg [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg">
+      {/* Question Title and Content */}
+      <td className="whitespace-nowrap py-3 pl-6 pr-3">
+        <div className="flex flex-col">
+          <div className="h-5 w-48 rounded bg-gray-100 mb-2"></div>
+          <div className="h-4 w-64 rounded bg-gray-100"></div>
+        </div>
+      </td>
+      {/* Author */}
+      <td className="whitespace-nowrap px-3 py-3">
+        <div className="flex flex-col">
+          <div className="h-4 w-24 rounded bg-gray-100 mb-1"></div>
+          <div className="h-3 w-32 rounded bg-gray-100"></div>
+        </div>
+      </td>
+      {/* Stats */}
+      <td className="whitespace-nowrap px-3 py-3">
+        <div className="flex flex-col space-y-1">
+          <div className="h-4 w-16 rounded bg-gray-100"></div>
+          <div className="h-4 w-12 rounded bg-gray-100"></div>
+          <div className="h-4 w-14 rounded bg-gray-100"></div>
+        </div>
+      </td>
+      {/* Tags */}
+      <td className="whitespace-nowrap px-3 py-3">
+        <div className="flex gap-1">
+          <div className="h-6 w-12 rounded-full bg-gray-100"></div>
+          <div className="h-6 w-16 rounded-full bg-gray-100"></div>
+        </div>
+      </td>
+      {/* Created Date */}
+      <td className="whitespace-nowrap px-3 py-3">
+        <div className="flex flex-col">
+          <div className="h-4 w-20 rounded bg-gray-100 mb-1"></div>
+          <div className="h-3 w-16 rounded bg-gray-100"></div>
+        </div>
+      </td>
+      {/* Actions */}
+      <td className="whitespace-nowrap py-3 pl-6 pr-3">
+        <div className="flex justify-end gap-3">
+          <div className="h-8 w-8 rounded bg-gray-100"></div>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+export function QuestionMobileSkeleton() {
+  return (
+    <div className="mb-2 w-full rounded-md bg-white p-4">
+      <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+        <div className="flex flex-col flex-grow">
+          <div className="h-4 w-24 rounded bg-gray-100 mb-2"></div>
+          <div className="h-5 w-48 rounded bg-gray-100"></div>
+        </div>
+      </div>
+      <div className="flex w-full items-center justify-between pt-4">
+        <div className="flex items-center space-x-4">
+          <div className="h-4 w-8 rounded bg-gray-100"></div>
+          <div className="h-4 w-8 rounded bg-gray-100"></div>
+          <div className="h-4 w-8 rounded bg-gray-100"></div>
+        </div>
+        <div className="h-4 w-16 rounded bg-gray-100"></div>
+      </div>
+      <div className="mt-2 flex gap-1">
+        <div className="h-5 w-12 rounded-full bg-gray-100"></div>
+        <div className="h-5 w-16 rounded-full bg-gray-100"></div>
+      </div>
+    </div>
+  );
+}
+
+export function QuestionsTableSkeleton() {
+  return (
+    <div className="mt-6 flow-root">
+      <div className="inline-block min-w-full align-middle">
+        <div className="rounded-lg bg-gray-50 p-2 md:pt-0">
+          {/* Header skeleton */}
+          <div className="mb-4 flex items-center justify-between">
+            <div className="h-6 w-40 rounded bg-gray-100"></div>
+            <div className="h-4 w-24 rounded bg-gray-100"></div>
+          </div>
+
+          {/* Mobile skeleton */}
+          <div className="md:hidden">
+            <QuestionMobileSkeleton />
+            <QuestionMobileSkeleton />
+            <QuestionMobileSkeleton />
+            <QuestionMobileSkeleton />
+            <QuestionMobileSkeleton />
+          </div>
+
+          {/* Desktop table skeleton */}
+          <table className="hidden min-w-full text-gray-900 md:table">
+            <thead className="rounded-lg text-left text-sm font-normal">
+              <tr>
+                <th scope="col" className="px-4 py-5 font-medium sm:pl-6">
+                  Question
+                </th>
+                <th scope="col" className="px-3 py-5 font-medium">
+                  Author
+                </th>
+                <th scope="col" className="px-3 py-5 font-medium">
+                  Stats
+                </th>
+                <th scope="col" className="px-3 py-5 font-medium">
+                  Tags
+                </th>
+                <th scope="col" className="px-3 py-5 font-medium">
+                  Created
+                </th>
+                <th scope="col" className="relative py-3 pl-6 pr-3">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white">
+              <QuestionRowSkeleton />
+              <QuestionRowSkeleton />
+              <QuestionRowSkeleton />
+              <QuestionRowSkeleton />
+              <QuestionRowSkeleton />
+              <QuestionRowSkeleton />
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function QuestionDetailSkeleton() {
+  return (
+    <div className={`${shimmer} relative overflow-hidden`}>
+      {/* Breadcrumb skeleton */}
+      <div className="flex items-center space-x-2 mb-6">
+        <div className="h-4 w-16 rounded bg-gray-100"></div>
+        <div className="h-4 w-4 rounded bg-gray-100"></div>
+        <div className="h-4 w-32 rounded bg-gray-100"></div>
+      </div>
+
+      {/* Question header skeleton */}
+      <div className="bg-white border rounded-lg p-6 mb-6">
+        <div className="h-8 w-3/4 rounded bg-gray-100 mb-4"></div>
+
+        <div className="flex flex-wrap items-center gap-4 mb-4">
+          <div className="h-4 w-20 rounded bg-gray-100"></div>
+          <div className="h-4 w-24 rounded bg-gray-100"></div>
+          <div className="h-4 w-16 rounded bg-gray-100"></div>
+        </div>
+
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-4 w-4 rounded bg-gray-100"></div>
+          <div className="h-6 w-16 rounded-full bg-gray-100"></div>
+          <div className="h-6 w-20 rounded-full bg-gray-100"></div>
+        </div>
+
+        <div className="mb-6">
+          <div className="h-4 w-full rounded bg-gray-100 mb-2"></div>
+          <div className="h-4 w-full rounded bg-gray-100 mb-2"></div>
+          <div className="h-4 w-2/3 rounded bg-gray-100"></div>
+        </div>
+
+        <div className="flex items-center space-x-6 pt-4 border-t">
+          <div className="h-4 w-12 rounded bg-gray-100"></div>
+          <div className="h-4 w-12 rounded bg-gray-100"></div>
+          <div className="h-4 w-16 rounded bg-gray-100"></div>
+        </div>
+      </div>
+
+      {/* Answers section skeleton */}
+      <div className="mb-6">
+        <div className="h-6 w-32 rounded bg-gray-100 mb-4"></div>
+
+        {/* Answer skeletons */}
+        <div className="space-y-6">
+          <div className="bg-white border rounded-lg p-6">
+            <div className="flex items-start space-x-4">
+              <div className="w-10 h-10 rounded-full bg-gray-100"></div>
+              <div className="flex-grow">
+                <div className="flex items-center space-x-2 mb-3">
+                  <div className="h-4 w-20 rounded bg-gray-100"></div>
+                  <div className="h-4 w-16 rounded bg-gray-100"></div>
+                </div>
+                <div className="mb-4">
+                  <div className="h-4 w-full rounded bg-gray-100 mb-2"></div>
+                  <div className="h-4 w-full rounded bg-gray-100 mb-2"></div>
+                  <div className="h-4 w-3/4 rounded bg-gray-100"></div>
+                </div>
+                <div className="flex items-center space-x-6">
+                  <div className="h-4 w-8 rounded bg-gray-100"></div>
+                  <div className="h-4 w-8 rounded bg-gray-100"></div>
+                  <div className="h-4 w-16 rounded bg-gray-100"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border rounded-lg p-6">
+            <div className="flex items-start space-x-4">
+              <div className="w-10 h-10 rounded-full bg-gray-100"></div>
+              <div className="flex-grow">
+                <div className="flex items-center space-x-2 mb-3">
+                  <div className="h-4 w-20 rounded bg-gray-100"></div>
+                  <div className="h-4 w-16 rounded bg-gray-100"></div>
+                </div>
+                <div className="mb-4">
+                  <div className="h-4 w-full rounded bg-gray-100 mb-2"></div>
+                  <div className="h-4 w-2/3 rounded bg-gray-100"></div>
+                </div>
+                <div className="flex items-center space-x-6">
+                  <div className="h-4 w-8 rounded bg-gray-100"></div>
+                  <div className="h-4 w-8 rounded bg-gray-100"></div>
+                  <div className="h-4 w-16 rounded bg-gray-100"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
