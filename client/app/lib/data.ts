@@ -39,33 +39,23 @@ export async function fetchLatestInvoices() {
    }
 }
 
-export async function fetchCardData() {
+export async function fetchDashboardStats() {
    try {
-      const invoiceCountPromise = sql`SELECT COUNT(*) FROM invoices`;
-      const customerCountPromise = sql`SELECT COUNT(*) FROM customers`;
-      const invoiceStatusPromise = sql`SELECT
-         SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
-         SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
-         FROM invoices`;
+      const response = await fetch('http://localhost:3001/dashboard/stats');
 
-      const data = await Promise.all([
-         invoiceCountPromise,
-         customerCountPromise,
-         invoiceStatusPromise,
-      ]);
+      if (!response.ok) {
+         throw new Error('Failed to fetch dashboard stats');
+      }
 
-      const numberOfInvoices = Number(data[0].rows[0].count ?? '0');
-      const numberOfCustomers = Number(data[1].rows[0].count ?? '0');
-      const totalPaidInvoices = formatCurrency(data[2].rows[0].paid ?? '0');
-      const totalPendingInvoices = formatCurrency(
-         data[2].rows[0].pending ?? '0'
-      );
+      const data = await response.json();
 
       return {
-         numberOfCustomers,
-         numberOfInvoices,
-         totalPaidInvoices,
-         totalPendingInvoices,
+         totalQuestions: data.totalQuestions,
+         totalBlogs: data.totalBlogs,
+         totalUsers: data.totalUsers,
+         totalTags: data.totalTags,
+         topUsers: data.topUsers,
+         questionsByMonth: data.questionsByMonth,
       };
    } catch (error) {
       console.error('Database Error:', error);

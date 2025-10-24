@@ -79,4 +79,73 @@ export class DashboardRepository {
       },
     ]);
   }
+
+  async getQuestionsByMonth() {
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+    const questions = await this.questionModel.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: twelveMonthsAgo },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1 },
+      },
+      {
+        $project: {
+          _id: 0,
+          year: '$_id.year',
+          month: '$_id.month',
+          count: 1,
+        },
+      },
+    ]);
+
+    // Generate last 12 months array
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    const result = [];
+    const now = new Date();
+
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = months[date.getMonth()];
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+
+      // eslint-disable-next-line
+      const found = questions.find((q) => q.year === year && q.month === month);
+      result.push({
+        month: monthName,
+        // eslint-disable-next-line
+        count: found ? found.count : 0,
+      });
+    }
+
+    // eslint-disable-next-line
+    return result;
+  }
 }
