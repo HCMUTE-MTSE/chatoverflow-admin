@@ -261,7 +261,7 @@ export function DataTableDemo() {
   }, [authLoading, isAuthenticated, loadTags]);
 
   const handleNextPage = () => {
-    if (pagination.nextUrl) {
+    if (pagination.nexturl) {
       loadTags(pagination.page + 1, pagination.limit);
     }
   };
@@ -416,7 +416,7 @@ export function DataTableDemo() {
             variant="outline"
             size="sm"
             onClick={handlePreviousPage}
-            disabled={!table.getCanPreviousPage()}
+            disabled={pagination.page === 1 || loading}
           >
             Previous
           </Button>
@@ -424,7 +424,7 @@ export function DataTableDemo() {
             variant="outline"
             size="sm"
             onClick={handleNextPage}
-            disabled={!table.getCanNextPage()}
+            disabled={!pagination.nexturl || loading}
           >
             Next
           </Button>
